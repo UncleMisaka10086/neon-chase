@@ -1,0 +1,9 @@
+{
+  "name": "Neon Chase",
+  "short_name": "NeonChase",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#1a0b2e",
+  "theme_color": "#ff0055"
+}
