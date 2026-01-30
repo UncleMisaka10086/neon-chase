@@ -1,283 +1,291 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8" />
-<title>NEON CHASE</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+    <meta charset="UTF-8">
+    <!-- 核心：禁止缩放，适配移动端视口，适配刘海屏 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Neon Chase - Mobile</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background-color: #2c0e3a; 
+            font-family: 'Segoe UI', Arial, sans-serif;
+            user-select: none;
+            /* 核心：禁止移动端浏览器的默认触摸行为（如橡皮筋效果、下拉刷新） */
+            touch-action: none;
+            -webkit-tap-highlight-color: transparent;
+        }
 
-<style>
-body {
-    margin: 0;
-    overflow: hidden;
-    background: #2c0e3a;
-    font-family: Segoe UI, Arial, sans-serif;
-    user-select: none;
-    touch-action: none;
-}
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            display: flex; flex-direction: column; justify-content: space-between;
+            z-index: 10;
+        }
 
-#ui-layer {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 10;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-}
+        #hud {
+            padding: 20px; 
+            padding-top: max(20px, env(safe-area-inset-top)); /* 适配刘海屏 */
+            display: flex; justify-content: space-between;
+        }
+        
+        .stat-box {
+            background: rgba(0, 0, 0, 0.5);
+            border-bottom: 3px solid #00ffff;
+            padding: 8px 15px; border-radius: 8px;
+            color: #fff; text-align: center;
+            backdrop-filter: blur(5px);
+            transform: skew(-10deg);
+            min-width: 80px;
+        }
+        
+        #score { font-size: 28px; font-weight: 900; color: #ffd700; font-family: monospace; }
+        #speed-display { font-size: 14px; color: #00ffff; font-family: monospace; }
 
-#hud {
-    padding: 16px;
-    display: flex;
-    justify-content: space-between;
-}
+        #menu-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(20, 10, 30, 0.95);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            pointer-events: auto; z-index: 20;
+            transition: opacity 0.3s;
+        }
+        
+        h1 {
+            color: #fff; font-size: 48px; margin-bottom: 0px; font-style: italic;
+            text-transform: uppercase;
+            background: linear-gradient(to bottom, #ff0055, #ffcc00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 15px rgba(255,0,85,0.8));
+            text-align: center;
+            line-height: 1.2;
+        }
 
-.stat-box {
-    background: rgba(0,0,0,.55);
-    border-bottom: 3px solid #00ffff;
-    padding: 8px 20px;
-    border-radius: 8px;
-    color: #fff;
-    text-align: center;
-    transform: skew(-10deg);
-}
+        .busted-text {
+            color: #ff3333; font-size: 60px; font-weight: 900; 
+            border: 5px solid #ff3333; padding: 10px 30px;
+            transform: rotate(-10deg);
+            display: none;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px black;
+        }
 
-#score {
-    font-size: 32px;
-    font-weight: 900;
-    color: #ffd700;
-    font-family: monospace;
-}
+        /* 增大按钮以便触摸 */
+        .btn-start {
+            margin-top: 40px; 
+            padding: 20px 80px; 
+            font-size: 24px; font-weight: bold;
+            color: white; background: #0077ff;
+            border: none; border-radius: 50px; cursor: pointer;
+            box-shadow: 0 0 20px #0077ff;
+            transition: all 0.2s;
+            -webkit-appearance: none; /* iOS 按钮样式重置 */
+        }
+        .btn-start:active { background: #4499ff; transform: scale(0.95); }
 
-#speed-display {
-    font-size: 16px;
-    color: #00ffff;
-    font-family: monospace;
-}
+        .tips { 
+            color: rgba(255,255,255,0.5); 
+            margin-top: 30px; 
+            font-size: 14px; 
+            text-align: center;
+            line-height: 1.6;
+            padding: 0 20px;
+        }
 
-#menu-overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(20,10,30,.95);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 20;
-    transition: opacity .3s;
-}
-
-h1 {
-    font-size: 56px;
-    margin: 0;
-    background: linear-gradient(#ff0055,#ffcc00);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-
-.busted-text {
-    font-size: 72px;
-    font-weight: 900;
-    color: #ff3333;
-    border: 4px solid #ff3333;
-    padding: 10px 36px;
-    transform: rotate(-8deg);
-    display: none;
-    margin-bottom: 20px;
-}
-
-.btn-start {
-    margin-top: 32px;
-    padding: 14px 50px;
-    font-size: 22px;
-    font-weight: bold;
-    color: white;
-    background: #0077ff;
-    border: none;
-    border-radius: 6px;
-    box-shadow: 0 0 20px #0077ff;
-}
-
-.tips {
-    margin-top: 28px;
-    font-size: 13px;
-    opacity: .5;
-    text-align: center;
-}
-</style>
-
-<script src="https://cdn.bootcdn.net/ajax/libs/three.js/r128/three.min.js"></script>
+        /* 移动端横屏优化 */
+        @media (max-width: 600px) {
+            h1 { font-size: 40px; }
+            .stat-box { padding: 5px 12px; }
+            #score { font-size: 24px; }
+        }
+    </style>
+    <!-- 3D引擎 -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
-
 <body>
 
-<div id="ui-layer">
-    <div id="hud">
-        <div class="stat-box">
-            <div style="font-size:10px;opacity:.7">SCORE</div>
-            <div id="score">0</div>
-        </div>
-        <div class="stat-box">
-            <div style="font-size:10px;opacity:.7">SPEED</div>
-            <div id="speed-display">0 km/h</div>
+    <div id="ui-layer">
+        <div id="hud">
+            <div class="stat-box">
+                <div style="font-size: 10px; opacity:0.8">SCORE</div>
+                <div id="score">0</div>
+            </div>
+            <div class="stat-box">
+                <div style="font-size: 10px; opacity:0.8">SPEED</div>
+                <div id="speed-display">0 km/h</div>
+            </div>
         </div>
     </div>
-</div>
 
-<div id="menu-overlay">
-    <div id="busted-msg" class="busted-text">BUSTED!</div>
-    <h1 id="game-title">NEON CHASE</h1>
-    <p id="final-score" style="color:#ffd700;font-size:22px;display:none"></p>
-    <button class="btn-start" onclick="startGame()">RUN</button>
-    <div class="tips">
-        上滑跳跃 · 下滑翻滚<br>
-        左右滑动移动
+    <div id="menu-overlay">
+        <div id="busted-msg" class="busted-text">BUSTED!</div>
+        <h1 id="game-title">NEON<br>CHASE</h1>
+        <p id="final-score" style="color:#ffd700; font-size:24px; display:none; margin-top:10px;">0</p>
+        <button class="btn-start" onclick="startGame()">RUN!</button>
+        <div class="tips">
+            警报：后方有追兵！<br>
+            <span style="color:#00ffff">手指滑动屏幕控制</span><br>
+            ⬆跳跃 ⬇翻滚 ⬅➡左右移动
+        </div>
     </div>
-</div>
 
-<script>
-/* ========== 参数 ========== */
-const PHYSICS = {
-    initSpeed: 10,
-    maxSpeed: 45,
-    gravity: -35,
-    jumpForce: 16,
-    laneSpeed: 8,
-    leanAmount: .3,
-    chaserLag: .08
-};
+    <script>
+        // --- 游戏参数 ---
+        const PHYSICS = {
+            initSpeed: 10,
+            maxSpeed: 50,
+            gravity: -35,
+            jumpForce: 16,
+            laneSpeed: 8,
+            leanAmount: 0.3,
+            chaserLag: 0.08
+        };
 
-const COLORS = {
-    sky: 0x1a0b2e,
-    ground: 0x111111,
-    player: 0xff0055,
-    chaser: 0x0055ff
-};
+        const COLORS = {
+            sky: 0x1a0b2e,
+            ground: 0x111111,
+            player: 0xff0055,
+            chaser: 0x0055ff
+        };
 
-/* ========== 状态 ========== */
-let scene, camera, renderer;
-let playerGroup, playerMesh, playerBody, playerHead;
-let chaserGroup, sirenLight;
-let groundModules=[], obstacles=[], coins=[];
-let isPlaying=false, score=0, gameSpeed=0;
-let currentLane=0, targetX=0;
-let verticalVelocity=0, isJumping=false, isRolling=false;
-let crouchFactor=0, rollTimer=null;
-let firstTouchStarted=false;
+        let scene, camera, renderer;
+        let playerGroup, playerMesh, playerBody, playerHead;
+        let chaserGroup, chaserBody, sirenLight;
+        let groundModules = [];
+        let obstacles = [];
+        let coins = [];
+        
+        let isPlaying = false;
+        let score = 0;
+        let gameSpeed = 0;
+        
+        let currentLane = 0; 
+        let targetX = 0;
+        let verticalVelocity = 0;
+        let isJumping = false;
+        let isRolling = false;
+        let rollTimer = null;
+        let crouchFactor = 0;
 
-/* ========== 初始化 ========== */
-window.onload = ()=>{
-    initGame();
-    animate();
-};
+        // 触摸变量
+        let touchStartX = 0;
+        let touchStartY = 0;
 
-/* ========== 场景 ========== */
-function initGame(){
-    scene=new THREE.Scene();
-    scene.background=new THREE.Color(COLORS.sky);
-    scene.fog=new THREE.FogExp2(COLORS.sky,.02);
+        window.onload = () => {
+            if (typeof THREE === 'undefined') return alert("资源加载失败，请检查网络");
+            initGame();
+            animate();
+        };
 
-    camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,.1,100);
-    camera.position.set(0,6.5,9.5);
-    camera.lookAt(0,0,-4);
+        function initGame() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(COLORS.sky);
+            scene.fog = new THREE.FogExp2(COLORS.sky, 0.02);
 
-    renderer=new THREE.WebGLRenderer({antialias:true});
-    renderer.setSize(innerWidth,innerHeight);
-    renderer.shadowMap.enabled=true;
-    document.body.appendChild(renderer.domElement);
+            // 初始化相机
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 100);
+            updateCameraPosition(); // 根据屏幕比例调整相机
 
-    scene.add(new THREE.AmbientLight(0x404060,.7));
-    const sun=new THREE.DirectionalLight(0xffaa00,1);
-    sun.position.set(20,40,20);
-    sun.castShadow=true;
-    scene.add(sun);
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            // 移动端优化：限制像素比，防止发热
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.body.appendChild(renderer.domElement);
 
-    createPlayer();
-    createChaser();
+            const ambient = new THREE.AmbientLight(0x404060, 0.7);
+            scene.add(ambient);
+            const sun = new THREE.DirectionalLight(0xffaa00, 1.0);
+            sun.position.set(20, 40, 20);
+            sun.castShadow = true;
+            sun.shadow.mapSize.width = 1024; // 移动端降低阴影分辨率
+            sun.shadow.mapSize.height = 1024;
+            sun.shadow.camera.left = -15; sun.shadow.camera.right = 15;
+            sun.shadow.camera.top = 20; sun.shadow.camera.bottom = -10;
+            scene.add(sun);
 
-    for(let i=0;i<15;i++) spawnMap(-i*15,i>2);
+            createPlayer();
+            createChaser();
 
-    addControls();
-}
+            for(let i=0; i<15; i++) spawnMap(-i * 15, i > 2);
 
-/* ========== 玩家 & 追捕者（与你原始一致，略） ========== */
-// --- 玩家模型 ---
+            window.addEventListener('resize', onResize);
+            document.addEventListener('keydown', onKeyDown);
+            setupTouch();
+        }
+
+        // --- 响应式相机调整 ---
+        function updateCameraPosition() {
+            // 如果是竖屏（手机），相机拉远一点，防止看不见两边的赛道
+            if(window.innerHeight > window.innerWidth) {
+                camera.position.set(0, 7.5, 11); 
+                camera.fov = 65;
+            } else {
+                camera.position.set(0, 6.5, 9.5);
+                camera.fov = 60;
+            }
+            camera.lookAt(0, 0, -4);
+            camera.updateProjectionMatrix();
+        }
+
         function createPlayer() {
             playerGroup = new THREE.Group();
-
-            // 材质
             const matBody = new THREE.MeshStandardMaterial({ color: COLORS.player, roughness: 0.3 });
             const matSkin = new THREE.MeshStandardMaterial({ color: 0xffccaa });
 
-            // 身体
             playerBody = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.9, 0.5), matBody);
             playerBody.position.y = 0.45;
             playerBody.castShadow = true;
             
-            // 头部
             playerHead = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), matSkin);
             playerHead.position.y = 1.0;
             playerHead.castShadow = true;
             
-            // 鸭舌帽 (朝前)
             const hat = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.2, 0.7), new THREE.MeshStandardMaterial({color:0x333}));
             hat.position.set(0, 0.35, -0.1);
             playerHead.add(hat);
 
-            // 组合
             playerMesh = new THREE.Group();
             playerMesh.add(playerBody);
             playerMesh.add(playerHead);
-            
             playerGroup.add(playerMesh);
             scene.add(playerGroup);
         }
 
-        // --- [新增] 追捕者模型 ---
         function createChaser() {
             chaserGroup = new THREE.Group();
-            
-            // 初始位置：在玩家身后 (Z轴正方向)
             chaserGroup.position.set(0, 0, 2.5); 
-
-            // 材质 (警察蓝)
             const matUniform = new THREE.MeshStandardMaterial({ color: COLORS.chaser, roughness: 0.4 });
             const matSkin = new THREE.MeshStandardMaterial({ color: 0xaa8866 });
 
-            // 身体 (稍微大一点，显得强壮)
             chaserBody = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.0, 0.6), matUniform);
             chaserBody.position.y = 0.5;
             chaserBody.castShadow = true;
             chaserGroup.add(chaserBody);
 
-            // 头部
             const head = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.65, 0.65), matSkin);
             head.position.y = 1.1;
             head.castShadow = true;
             chaserGroup.add(head);
 
-            // 警帽
             const cap = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.3, 0.7), matUniform);
             cap.position.y = 1.5;
             chaserGroup.add(cap);
 
-            // 警灯 (红蓝闪烁)
             sirenLight = new THREE.PointLight(0xff0000, 0, 5);
             sirenLight.position.set(0, 2, 0);
             chaserGroup.add(sirenLight);
             
-            // 警灯模型
             const lightMesh = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.15, 0.15), new THREE.MeshBasicMaterial({color:0xff0000}));
             lightMesh.position.y = 1.7;
             chaserGroup.add(lightMesh);
-
             scene.add(chaserGroup);
         }
 
-            // --- 地图生成 ---
         function spawnMap(zPos, spawnItems) {
             const section = new THREE.Group();
-            
-            // 地板
             const floor = new THREE.Mesh(
                 new THREE.PlaneGeometry(16, 15),
                 new THREE.MeshStandardMaterial({ color: COLORS.ground, roughness: 0.8 })
@@ -286,7 +294,6 @@ function initGame(){
             floor.receiveShadow = true;
             section.add(floor);
 
-            // 铁轨装饰
             const railMat = new THREE.MeshStandardMaterial({ color: 0x555555 });
             [-3.5, 0, 3.5].forEach(x => {
                 const r1 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.05, 15), railMat);
@@ -295,14 +302,12 @@ function initGame(){
                 r2.position.set(x+0.6, 0.02, 0); section.add(r2);
             });
 
-            // 建筑装饰
             if (spawnItems) {
                 const wallGeo = new THREE.BoxGeometry(3, 8, 4);
                 const wallMat = new THREE.MeshStandardMaterial({ color: 0x080808 });
                 if(Math.random()>0.5) {
                     const w = new THREE.Mesh(wallGeo, wallMat);
                     w.position.set(-9, 4, 0); section.add(w);
-                    // 霓虹灯
                     const l = new THREE.Mesh(new THREE.BoxGeometry(0.2, 6, 0.2), new THREE.MeshBasicMaterial({color: 0xff00ff}));
                     l.position.set(-7.4, 4, 0); section.add(l);
                 }
@@ -313,11 +318,9 @@ function initGame(){
                     l.position.set(7.4, 4, 0); section.add(l);
                 }
             }
-
             section.position.z = zPos;
             scene.add(section);
             groundModules.push(section);
-
             if(spawnItems) spawnObstacles(zPos);
         }
 
@@ -336,17 +339,17 @@ function initGame(){
         function createObstacle(x, z) {
             const r = Math.random();
             let obs;
-            if (r < 0.4) { // 矮墙
+            if (r < 0.4) {
                 obs = new THREE.Mesh(new THREE.BoxGeometry(2.8, 1.2, 0.5), new THREE.MeshStandardMaterial({ color: 0xff4444 }));
                 obs.position.set(x, 0.6, z);
                 obs.userData = { type: 'barrier' };
-            } else if (r < 0.8) { // 火车
+            } else if (r < 0.8) {
                 obs = new THREE.Group();
                 const body = new THREE.Mesh(new THREE.BoxGeometry(2.9, 3.2, 7), new THREE.MeshStandardMaterial({ color: 0x335599 }));
                 body.position.y = 1.6; body.castShadow=true; obs.add(body);
                 obs.position.set(x, 0, z);
                 obs.userData = { type: 'train' };
-            } else { // 门
+            } else {
                 obs = new THREE.Mesh(new THREE.BoxGeometry(3, 0.5, 0.5), new THREE.MeshStandardMaterial({ color: 0x22aa22 }));
                 obs.position.set(x, 2.6, z);
                 const leg = new THREE.Mesh(new THREE.BoxGeometry(0.2, 2.6, 0.2), new THREE.MeshStandardMaterial({color:0x444}));
@@ -366,97 +369,191 @@ function initGame(){
                 scene.add(c); coins.push(c);
             }
         }
-/* ========== 核心循环（整合打磨） ========== */
-function animate(){
-    requestAnimationFrame(animate);
-    if(!isPlaying){
-        if(sirenLight){
-            sirenLight.color.setHex(Date.now()%400<200?0xff0000:0x0000ff);
-            sirenLight.intensity=2;
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if(!isPlaying) {
+                if(sirenLight && Date.now() % 500 < 250) {
+                    sirenLight.intensity = 2; sirenLight.color.setHex(0xff0000);
+                } else if (sirenLight) {
+                    sirenLight.intensity = 2; sirenLight.color.setHex(0x0000ff);
+                }
+                renderer.render(scene, camera);
+                return;
+            }
+
+            const dt = 0.016;
+            const diffX = targetX - playerGroup.position.x;
+            playerGroup.position.x += diffX * PHYSICS.laneSpeed * dt;
+            playerMesh.rotation.z = THREE.MathUtils.lerp(playerMesh.rotation.z, -diffX * PHYSICS.leanAmount, 0.1);
+
+            verticalVelocity += PHYSICS.gravity * dt;
+            playerGroup.position.y += verticalVelocity * dt;
+
+            if(playerGroup.position.y <= 0) {
+                playerGroup.position.y = 0; verticalVelocity = 0; isJumping = false;
+            }
+
+            const targetCrouch = isRolling ? 1 : 0;
+            crouchFactor = THREE.MathUtils.lerp(crouchFactor, targetCrouch, 10 * dt);
+            playerBody.scale.y = 1.0 - (crouchFactor * 0.4);
+            playerBody.position.y = 0.45 - (crouchFactor * 0.2);
+            playerHead.position.y = 1.0 - (crouchFactor * 0.5);
+
+            // 追捕者逻辑
+            chaserGroup.position.x = THREE.MathUtils.lerp(chaserGroup.position.x, playerGroup.position.x, PHYSICS.chaserLag);
+            chaserGroup.position.y = THREE.MathUtils.lerp(chaserGroup.position.y, playerGroup.position.y, PHYSICS.chaserLag * 1.5);
+            chaserGroup.rotation.z = -(playerGroup.position.x - chaserGroup.position.x) * 0.2;
+            chaserGroup.position.z = 2.5 + Math.sin(Date.now() * 0.01) * 0.2;
+
+            if(Date.now() % 200 < 100) {
+                sirenLight.intensity = 1.5; sirenLight.color.setHex(0xff0000);
+            } else {
+                sirenLight.intensity = 1.5; sirenLight.color.setHex(0x0000ff);
+            }
+
+            const moveDist = gameSpeed * dt;
+            groundModules.forEach(g => {
+                g.position.z += moveDist;
+                if(g.position.z > 15) {
+                    let minZ = 0;
+                    groundModules.forEach(o => minZ = Math.min(minZ, o.position.z));
+                    g.position.z = minZ - 15;
+                    spawnObstacles(g.position.z);
+                }
+            });
+
+            updateEntities(obstacles, moveDist, true);
+            updateEntities(coins, moveDist, false);
+
+            if(gameSpeed < PHYSICS.maxSpeed) gameSpeed += 0.005;
+            document.getElementById('speed-display').innerText = Math.floor(gameSpeed) + " km/h";
+
+            renderer.render(scene, camera);
         }
-        renderer.render(scene,camera);
-        return;
-    }
 
-    const dt=.016;
+        function updateEntities(list, moveDist, isObs) {
+            for(let i=list.length-1; i>=0; i--) {
+                const obj = list[i];
+                obj.position.z += moveDist;
+                if(!isObs) obj.rotation.y += 0.1;
 
-    // 玩家
-    const dx=targetX-playerGroup.position.x;
-    playerGroup.position.x+=dx*PHYSICS.laneSpeed*dt;
-    playerMesh.rotation.z=THREE.MathUtils.lerp(playerMesh.rotation.z,-dx*PHYSICS.leanAmount,.1);
+                const dz = Math.abs(obj.position.z - playerGroup.position.z);
+                const dx = Math.abs(obj.position.x - playerGroup.position.x);
 
-    verticalVelocity+=PHYSICS.gravity*dt;
-    playerGroup.position.y+=verticalVelocity*dt;
-    if(playerGroup.position.y<=0){
-        playerGroup.position.y=0;
-        verticalVelocity=0;
-        isJumping=false;
-    }
-
-    const tc=isRolling?1:0;
-    crouchFactor=THREE.MathUtils.lerp(crouchFactor,tc,10*dt);
-    playerBody.scale.y=1-.4*crouchFactor;
-    playerHead.position.y=1-.5*crouchFactor;
-
-    // 追捕者
-    chaserGroup.position.x=THREE.MathUtils.lerp(chaserGroup.position.x,playerGroup.position.x,PHYSICS.chaserLag);
-    chaserGroup.position.y=THREE.MathUtils.lerp(chaserGroup.position.y,playerGroup.position.y,PHYSICS.chaserLag*1.5);
-    chaserGroup.position.z=2.4+Math.sin(Date.now()*.01)*.2;
-
-    // 难度曲线 ★
-    const diff=Math.min(score/500,1);
-    gameSpeed=PHYSICS.initSpeed+diff*(PHYSICS.maxSpeed-PHYSICS.initSpeed);
-
-    document.getElementById("speed-display").innerText=Math.floor(gameSpeed)+" km/h";
-
-    renderer.render(scene,camera);
-}
-
-/* ========== GameOver 打磨版 ========== */
-function triggerGameOver(){
-    isPlaying=false;
-
-    // 镜头抖动 ★
-    camera.position.x+=(Math.random()-.5)*.2;
-    camera.position.y+=(Math.random()-.5)*.2;
-
-    const best=Math.max(score,localStorage.bestScore||0);
-    localStorage.bestScore=best;
-
-    document.getElementById("final-score").innerText=
-        `SCORE ${score}  |  BEST ${best}`;
-
-    document.getElementById("menu-overlay").style.display="flex";
-    document.getElementById("busted-msg").style.display="block";
-    document.getElementById("final-score").style.display="block";
-}
-
-/* ========== 控制（触屏自动开始） ========== */
-function addControls(){
-    let sx,sy;
-    document.addEventListener("touchstart",e=>{
-        if(!firstTouchStarted && !isPlaying){
-            firstTouchStarted=true;
-            startGame();
+                if(dz < 1.0 && dx < 0.8) {
+                    if(isObs) {
+                        let safe = false;
+                        if(obj.userData.type === 'barrier' && playerGroup.position.y > 1.1) safe = true;
+                        if(obj.userData.type === 'arch' && isRolling) safe = true;
+                        if(!safe) triggerGameOver();
+                    } else {
+                        score += 10;
+                        document.getElementById('score').innerText = score;
+                        scene.remove(obj); list.splice(i, 1);
+                    }
+                } else if(obj.position.z > 10) {
+                    scene.remove(obj); list.splice(i, 1);
+                }
+            }
         }
-        sx=e.touches[0].clientX;
-        sy=e.touches[0].clientY;
-    });
 
-    document.addEventListener("touchend",e=>{
-        if(!isPlaying) return;
-        const dx=e.changedTouches[0].clientX-sx;
-        const dy=e.changedTouches[0].clientY-sy;
-        if(Math.abs(dx)>Math.abs(dy)){
-            if(Math.abs(dx)>30) changeLane(dx<0?-1:1);
-        }else{
-            if(Math.abs(dy)>30) dy<0?jump():roll();
+        function triggerGameOver() {
+            isPlaying = false;
+            chaserGroup.position.x = playerGroup.position.x;
+            chaserGroup.position.z = playerGroup.position.z + 1.2; 
+            chaserGroup.position.y = 0;
+
+            const menu = document.getElementById('menu-overlay');
+            menu.style.display = 'flex';
+            setTimeout(()=> menu.style.opacity = 1, 50);
+
+            document.getElementById('game-title').style.display = 'none';
+            document.getElementById('busted-msg').style.display = 'block';
+            document.getElementById('final-score').style.display = 'block';
+            document.getElementById('final-score').innerText = "FINAL SCORE: " + score;
+            document.querySelector('.btn-start').innerText = "TRY AGAIN";
         }
-    });
-}
 
-/* ========== 其余函数与你原始一致 ========== */
-</script>
+        function startGame() {
+            const menu = document.getElementById('menu-overlay');
+            menu.style.opacity = 0;
+            setTimeout(()=> {
+                menu.style.display='none';
+                document.getElementById('busted-msg').style.display = 'none';
+                document.getElementById('game-title').style.display = 'block';
+            }, 300);
 
+            isPlaying = true;
+            score = 0;
+            gameSpeed = PHYSICS.initSpeed;
+            currentLane=0; targetX=0; playerGroup.position.set(0,0,0);
+            chaserGroup.position.set(0, 0, 2.5);
+
+            document.getElementById('score').innerText = 0;
+            obstacles.forEach(o=>scene.remove(o)); obstacles=[];
+            coins.forEach(c=>scene.remove(c)); coins=[];
+            groundModules.forEach((g,i) => g.position.z = -i*15);
+        }
+
+        function onKeyDown(e) {
+            if(!isPlaying) return;
+            const k = e.key.toLowerCase();
+            if(k==='a'||k==='arrowleft') changeLane(-1);
+            if(k==='d'||k==='arrowright') changeLane(1);
+            if(k==='w'||k==='arrowup'||k===' ') jump();
+            if(k==='s'||k==='arrowdown') roll();
+        }
+
+        // --- 手机触摸控制逻辑 ---
+        function setupTouch() {
+            document.addEventListener('touchstart', e => {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+            }, {passive: false});
+
+            document.addEventListener('touchmove', e => {
+                // 防止滑动屏幕时触发浏览器滚动
+                if(isPlaying) e.preventDefault(); 
+            }, {passive: false});
+
+            document.addEventListener('touchend', e => {
+                if(!isPlaying) return;
+                const dx = e.changedTouches[0].clientX - touchStartX;
+                const dy = e.changedTouches[0].clientY - touchStartY;
+                
+                // 触摸灵敏度阈值 (30px)
+                const threshold = 30;
+
+                if(Math.abs(dx) > Math.abs(dy)) {
+                    // 水平滑动
+                    if(Math.abs(dx) > threshold) changeLane(dx < 0 ? -1 : 1);
+                } else {
+                    // 垂直滑动
+                    if(Math.abs(dy) > threshold) dy < 0 ? jump() : roll();
+                }
+            }, {passive: false});
+        }
+
+        function changeLane(d) { 
+            currentLane = Math.max(-1, Math.min(1, currentLane+d)); 
+            targetX = currentLane * 3.5; 
+        }
+        function jump() { 
+            if(!isJumping) { verticalVelocity = PHYSICS.jumpForce; isJumping=true; } 
+        }
+        function roll() { 
+            isRolling=true; 
+            if(rollTimer) clearTimeout(rollTimer); 
+            if(isJumping) verticalVelocity = -25; // 快速下坠
+            rollTimer=setTimeout(()=>isRolling=false, 800); 
+        }
+
+        function onResize() {
+            updateCameraPosition();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+    </script>
 </body>
 </html>
