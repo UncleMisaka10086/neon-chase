@@ -1,92 +1,214 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<title>Neon Chase</title>
+  <meta charset="UTF-8" />
+  <title>Neon Chase</title>
 
-<meta name="viewport"
-      content="width=device-width, initial-scale=1.0,
-               maximum-scale=1.0, user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0,
+                 maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
 
-<link rel="manifest" href="manifest.json">
+  <link rel="manifest" href="manifest.json">
 
-<style>
-html,body { margin:0; padding:0; overflow:hidden; background:#1a0b2e; }
-canvas { touch-action: none; }
-</style>
-
-<script src="https://cdn.bootcdn.net/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #000;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont;
+    }
+    canvas {
+      display: block;
+      touch-action: none;
+    }
+    #ui {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      color: #0ff;
+      font-size: 16px;
+      z-index: 10;
+      text-shadow: 0 0 6px #0ff;
+    }
+    #hint {
+      position: fixed;
+      bottom: 20px;
+      width: 100%;
+      text-align: center;
+      color: #aaa;
+      font-size: 14px;
+      z-index: 10;
+    }
+  </style>
 </head>
 <body>
 
-<script>
-/* ===== 移动端强制设置 ===== */
-document.addEventListener('gesturestart', e => e.preventDefault());
+<div id="ui">Score: <span id="score">0</span></div>
+<div id="hint">左右滑动 / A D 移动</div>
 
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+
+<script>
+/* ------------------ 基础防缩放 / 横屏 ------------------ */
+document.addEventListener('gesturestart', e => e.preventDefault());
 if (screen.orientation?.lock) {
   screen.orientation.lock('landscape').catch(()=>{});
 }
 
-/* ===== THREE.js 渲染器（手机优化） ===== */
-let scene,camera,renderer;
+/* ------------------ Three.js 初始化 ------------------ */
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x050010, 5, 40);
 
-init();
-animate();
+const camera = new THREE.PerspectiveCamera(
+  70,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  100
+);
+camera.position.set(0, 2.5, 6);
 
-function init(){
-  scene=new THREE.Scene();
-  scene.background=new THREE.Color(0x1a0b2e);
+const renderer = new THREE.WebGLRenderer({
+  antialias: false,
+  powerPreference: "high-performance"
+});
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+document.body.appendChild(renderer.domElement);
 
-  camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,100);
-  camera.position.set(0,6.5,9.5);
-  camera.lookAt(0,0,-4);
+/* ------------------ 灯光 ------------------ */
+scene.add(new THREE.AmbientLight(0x4040ff, 0.6));
 
-  renderer=new THREE.WebGLRenderer({
-    antialias:false,
-    powerPreference:"high-performance"
-  });
-  renderer.setSize(innerWidth,innerHeight);
-  renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
-  document.body.appendChild(renderer.domElement);
+const dirLight = new THREE.DirectionalLight(0x00ffff, 1.2);
+dirLight.position.set(0, 10, 10);
+scene.add(dirLight);
 
-  const light=new THREE.DirectionalLight(0xffffff,1);
-  light.position.set(10,20,10);
-  scene.add(light);
+/* ------------------ 地面 ------------------ */
+const groundGeo = new THREE.PlaneGeometry(100, 100);
+const groundMat = new THREE.MeshStandardMaterial({
+  color: 0x050505,
+  emissive: 0x100020,
+  roughness: 0.8
+});
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI / 2;
+ground.position.z = -40;
+scene.add(ground);
 
-  const floor=new THREE.Mesh(
-    new THREE.PlaneGeometry(20,100),
-    new THREE.MeshStandardMaterial({color:0x111111})
-  );
-  floor.rotation.x=-Math.PI/2;
-  scene.add(floor);
+/* ------------------ 玩家 ------------------ */
+const player = new THREE.Mesh(
+  new THREE.BoxGeometry(0.8, 1.2, 0.8),
+  new THREE.MeshStandardMaterial({
+    color: 0xff0066,
+    emissive: 0xff0044
+  })
+);
+player.position.y = 0.6;
+scene.add(player);
 
-  const player=new THREE.Mesh(
-    new THREE.BoxGeometry(1,2,1),
-    new THREE.MeshStandardMaterial({color:0xff0055})
-  );
-  player.position.y=1;
-  scene.add(player);
-}
+let lane = 0; // -1 0 1
 
-function animate(){
-  requestAnimationFrame(animate);
-  renderer.render(scene,camera);
-}
-
-addEventListener('resize',()=>{
-  camera.aspect=innerWidth/innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth,innerHeight);
+/* ------------------ 障碍 ------------------ */
+const obstacles = [];
+const obstacleGeo = new THREE.BoxGeometry(1, 1, 1);
+const obstacleMat = new THREE.MeshStandardMaterial({
+  color: 0x00ffff,
+  emissive: 0x00ffff
 });
 
-/* ===== PWA 注册 ===== */
-if('serviceWorker' in navigator){
+function spawnObstacle() {
+  const obs = new THREE.Mesh(obstacleGeo, obstacleMat);
+  const l = [-2, 0, 2][Math.floor(Math.random() * 3)];
+  obs.position.set(l, 0.5, -40);
+  scene.add(obs);
+  obstacles.push(obs);
+}
+
+/* ------------------ 控制 ------------------ */
+function moveLeft() {
+  lane = Math.max(-1, lane - 1);
+}
+function moveRight() {
+  lane = Math.min(1, lane + 1);
+}
+
+window.addEventListener('keydown', e => {
+  if (e.key === 'a' || e.key === 'ArrowLeft') moveLeft();
+  if (e.key === 'd' || e.key === 'ArrowRight') moveRight();
+});
+
+let touchX = null;
+window.addEventListener('touchstart', e => {
+  touchX = e.touches[0].clientX;
+});
+window.addEventListener('touchend', e => {
+  if (touchX === null) return;
+  const dx = e.changedTouches[0].clientX - touchX;
+  if (dx > 30) moveRight();
+  if (dx < -30) moveLeft();
+  touchX = null;
+});
+
+/* ------------------ 游戏循环 ------------------ */
+let speed = 0.25;
+let score = 0;
+let frame = 0;
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  // 玩家平滑移动
+  player.position.x += (lane * 2 - player.position.x) * 0.2;
+
+  // 摄像机跟随
+  camera.position.x += (player.position.x - camera.position.x) * 0.05;
+
+  // 障碍移动
+  for (let i = obstacles.length - 1; i >= 0; i--) {
+    const o = obstacles[i];
+    o.position.z += speed;
+
+    // 碰撞检测
+    if (
+      Math.abs(o.position.x - player.position.x) < 0.8 &&
+      Math.abs(o.position.z - player.position.z) < 0.8
+    ) {
+      alert('Game Over\nScore: ' + score);
+      location.reload();
+      return;
+    }
+
+    if (o.position.z > 5) {
+      scene.remove(o);
+      obstacles.splice(i, 1);
+      score++;
+      document.getElementById('score').textContent = score;
+    }
+  }
+
+  // 生成障碍
+  frame++;
+  if (frame % 60 === 0) spawnObstacle();
+
+  renderer.render(scene, camera);
+}
+
+animate();
+
+/* ------------------ 自适应 ------------------ */
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+/* ------------------ PWA ------------------ */
+if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js');
 }
 </script>
 
 </body>
 </html>
-
